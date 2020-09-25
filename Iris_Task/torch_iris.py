@@ -9,118 +9,113 @@ import torch.nn.functional as F
 class Net(nn.Module):
     def __init__(self):
         super(Net,self).__init__()
-        self.fc1 = nn.Linear(1,5)
-        self.fc2 = nn.Linear(5,4)
-        self.fc3 = nn.Linear(4,2)
-        self.fc4 = nn.Linear(4,3)
-        self.fc5 = nn.Linear(2,1)
-        self.relu = nn.Sigmoid()
+        self.layer1 = nn.Sequential(
+            nn.Linear(4,10),
+            nn.Sigmoid(),
+            nn.Linear(10,3),
+            nn.Sigmoid()
+        )
+
 
     def forward(self,x):
-        x = self.relu(self.fc1(x))
-        x = self.relu(self.fc2(x))
-        x = self.relu(self.fc3(x))
-        x = self.relu(self.fc4(x.T).T)
-        x = self.relu(self.fc5(x))
-        return x.reshape(3,1)
+        return self.layer1(x).view(-1)
 
 
-def dataToTensor(x):
-    data = torch.from_numpy(x)
-    return data
+def data2tensor(data):
+    for n in range(len(data)):
+        data[n] = float(data[n])
 
+    return torch.Tensor(data).reshape([1,4]).float()
 
-
-filename = "./iris.data"
-data = []
-answer = []
-with open(filename,"r") as f:
-    reader = csv.reader(f)
-    for row in reader:
-        if len(row)!=0:
-            if row[4]=='Iris-setosa':
-                ans=[1,0,0]
-            elif row[4] ==  'Iris-versicolor':
+def loadData():
+    def convert(*data):
+        values = []
+        for n in data:
+            if n[-1] == "Iris-setosa":
+                ans = [1,0,0]
+            elif n[-1] == "Iris-versicolor":
                 ans = [0,1,0]
-            elif row[4] ==  'Iris-virginica':
+            elif n[-1] == "Iris-virginica":
                 ans = [0,0,1]
-            data.append(row[:-1])
-            answer.append(ans)
+            values.append([n[:-1],ans])
+
+        return values
 
 
-d1 = data[:50]
-d2 = data[50:100]
-d3 = data[100:150]
-a1 = answer[:50]
-a2 = answer[50:100]
-a3 = answer[100:150]
-train = []
-check = []
-train_a = []
-check_a = []
-for n in range(50):
-    if n<33:
-        train.append(d1[n])
-        train.append(d2[n])
-        train.append(d3[n])
-        train_a.append(a1[n])
-        train_a.append(a2[n])
-        train_a.append(a3[n])
-    else:
-        check.append(d1[n])
-        check.append(d2[n])
-        check.append(d3[n])
-        check_a.append(a1[n])
-        check_a.append(a2[n])
-        check_a.append(a3[n])
+    filename = "iris.data"
+    data = []
+    test= []
+    count=count_= 0
+    with open(filename, "r") as f:
+        reader = list(csv.reader(f))[:-1]
+        setosa,versicolor,virginica = [reader[x:x+50] for x in range(0,150,50)]
 
-
-train = np.array(train,dtype=np.float32)
-train_a = np.array(train_a,dtype=np.float32)
-check = np.array(check,dtype=np.float32)
-check_a = np.array(check_a,dtype=np.float32)
-
-
-
-model = Net()
-criterion = nn.MSELoss()
-
-optimizer = torch.optim.Adam(model.parameters(),lr=0.01)
-
-for epoch in range(20):
-    for n in range(len(train)):
-        data = dataToTensor(train[n]).reshape(4,1)
-        ans = dataToTensor(train_a[n]).reshape(3,1)
-        output = model(data)
-#         print(output,"\n",ans,"\n","*****"*3)
-#         print(output.size(),ans.size())
-        loss = criterion(output,ans)
-
-        print("Epoch: %i\tLoss: %f" %(epoch,loss),end="\r")
-        optimizer.zero_grad()
-        loss.backward()
-        optimizer.step()
-    print("\n")
-
-correct = 0
-total = len(check)
-for n in range(total):
-    checkList = []
-    data = dataToTensor(check[n]).reshape(4,1)
-    ans = dataToTensor(check_a[n]).float().reshape(1,3)
-    output = model(data)
-#     print(output)
-#     print(ans)
-    for i in output.data:
-
-        if i.item() == torch.max(output.data):
-            checkList.append(1)
+    for d1,d2,d3 in zip(setosa,versicolor,virginica):
+        if count <37:
+            for n in convert(d1,d2,d3):
+                data.append(n)
+            count +=1
         else:
-            checkList.append(0)
+            for n in convert(d1,d2,d3):
+                test.append(n)
 
-    checkTensor = torch.tensor(checkList).reshape(1,3)
-    if torch.all(torch.eq(checkTensor,ans)):
-        correct+=1
-    proc = (correct/total)*100
-print("Total predict is: %f %%" %proc)
-print("correct is: %f" %correct)
+    return (data,test)
+
+
+def learn():
+    net = Net()
+    # net.load_state_dict(torch.load("model.th"))
+    criterion = nn.MSELoss()
+    optimizer = torch.optim.Adam(net.parameters(),lr=0.0005)
+    train,test = loadData()
+    for n in range(100):
+        for i,(data,label) in enumerate(train):
+            data = data2tensor(data)
+            label = torch.Tensor(label).float()
+            optimizer.zero_grad()
+            outputs = net(data)
+            loss = criterion(outputs,label)
+            loss.backward()
+            optimizer.step()
+            print("Epoch: {}\t Count: {}\tLoss: {}".format(n,i,loss.item()))
+
+    torch.save(net.state_dict(),"model.th")
+
+
+def run(choose):
+    net = Net()
+    net.load_state_dict(torch.load("model.th"))
+    criterion = nn.MSELoss()
+    optimizer = torch.optim.Adam(net.parameters(),lr=0.0005)
+    train,test = loadData()
+    correct = 0
+    if choose ==1:
+        dataset = train
+    elif choose == 2:
+        dataset = test
+    with torch.no_grad():
+        for data,label in dataset:
+            data = data2tensor(data)
+            label = torch.Tensor(label).float()
+            outputs = net(data)
+            if torch.max(label,0)[1] == torch.max(outputs,0)[1]:
+                correct +=1
+        print(correct*100/len(dataset))
+
+
+def main():
+    while 1:
+        ans = int(input("1)Обучить\n2)Протестировать\n3)Выйти\nОтвет:>"))
+        if ans == 1:
+            learn()
+        elif ans == 2:
+            ans = int(input("Запустить на тренировочных или тестовых данных?\n1)Тренирочные\n2)тестовыe\nОтвет:>"))
+            if ans == 1 :
+                run(1)
+            elif ans ==2:
+                run(2)
+        elif ans ==3:
+            break
+
+if __name__ == '__main__':
+    main()
