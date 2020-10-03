@@ -236,7 +236,9 @@ def optimize_model():
 
 
 num_episodes = 50
-for i_episode in range(num_episodes):
+# for i_episode in range(num_episodes):
+i_episode = 0
+while 1:
     # Initialize the environment and state
     env.reset()
     last_screen = get_screen()
@@ -271,6 +273,7 @@ for i_episode in range(num_episodes):
     # Update the target network, copying all weights and biases in DQN
     if i_episode % TARGET_UPDATE == 0:
         target_net.load_state_dict(policy_net.state_dict())
+    i_episode+=1
 
 print('Complete')
 env.render()
