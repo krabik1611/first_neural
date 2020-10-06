@@ -1,6 +1,9 @@
 import pygame
 import sys
 import random
+import numpy as np
+import matplotlib.pyplot as plt
+import PIL.Image as Image
 
 class Snake():
     def __init__(self):
@@ -83,8 +86,8 @@ def drawGrid(surface):
                 rr = pygame.Rect((x*gridsize, y*gridsize), (gridsize,gridsize))
                 pygame.draw.rect(surface, (84,194,205), rr)
 
-screen_width = 1280
-screen_height = 720
+screen_width = 600
+screen_height = 600
 
 gridsize = 20
 grid_width = screen_width/gridsize
@@ -96,6 +99,7 @@ left = (-1,0)
 right = (1,0)
 
 def main():
+    plt.ion()
     pygame.init()
 
     clock = pygame.time.Clock()
@@ -125,5 +129,9 @@ def main():
         text = myfont.render("Score {0}".format(snake.score), 1, (0,0,0))
         screen.blit(text, (5,10))
         pygame.display.update()
-
+        # break
+        imgdata = pygame.surfarray.pixels3d(surface)
+        pygame.Surface.lock(surface)
+        plt.imshow(imgdata.swapaxes(0,1))
+        plt.draw()
 main()
