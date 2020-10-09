@@ -21,10 +21,10 @@ class Net(nn.Module):
     def forward(self, x):
         x = self.pool(F.relu(self.conv1(x)))
         x = self.pool(F.relu(self.conv2(x)))
-        x = x.view(-1, 2704)
-        x = F.relu(self.fc1(x))
-        x = F.relu(self.fc2(x))
-        x = self.fc3(x)
+        # x = x.view(-1, 2704)
+        # x = F.relu(self.fc1(x))
+        # x = F.relu(self.fc2(x))
+        # x = self.fc3(x)
         return x
 
 transform = transforms.Compose([
@@ -101,6 +101,12 @@ def learn():
     plt.plot(all_loss)
     plt.show()
     print("Finish Traning")
+def showImg(array):
+    for i,img in enumerate(array,1):
+        plt.subplot(2,8,i),plt.imshow(img)
+        plt.title(i),plt.xticks([]),plt.yticks([])
+    plt.show()
+
 
 def test():
     global net
@@ -108,20 +114,28 @@ def test():
     global count
     count = 1
     net = Net()
-    net.load_state_dict(torch.load("model.th"))
+    # net.load_state_dict(torch.load("model.th"))
 
     try:
         with torch.no_grad():
             for data in trainloader:
-                if count < 6:
-                    inputs, labels = data
+                # if count < 6:
+                #     inputs, labels = data
+                #
+                #     outputs = net(inputs)#.to(device))
+                #     show(inputs,outputs)
+                #     count +=1
+                # else:
+                #     plt.show()
+                #     count = 1
+                inputs, labels = data
+                output1 = net(inputs)
+                net.load_state_dict(torch.load("model.th"))
+                output2 = net(inputs)
+                showImg(output1[0].detach().numpy())
+                showImg(output2[0].detach().numpy())
 
-                    outputs = net(inputs)#.to(device))
-                    show(inputs,outputs)
-                    count +=1
-                else:
-                    plt.show()
-                    count = 1
+                break
     except  KeyboardInterrupt:
         return 0
                                 # plt.show()
